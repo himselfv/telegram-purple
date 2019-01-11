@@ -139,8 +139,9 @@ PurpleConversation *p2tgl_find_conversation_with_account (struct tgl_state *TLS,
 }
 
 void p2tgl_prpl_got_user_status (struct tgl_state *TLS, tgl_peer_id_t user, struct tgl_user_status *status) {
+  debug("p2tgl_prpl_got_user_status(): in");
   connection_data *data = TLS->ev_base;
-  
+
   if (status->online == 1) {
     purple_prpl_got_user_status (tls_get_pa (TLS), tgp_blist_lookup_purple_name (TLS, user), "available", NULL);
   } else {
@@ -154,6 +155,9 @@ void p2tgl_prpl_got_user_status (struct tgl_state *TLS, tgl_peer_id_t user, stru
       purple_prpl_got_user_status (tls_get_pa (TLS), tgp_blist_lookup_purple_name (TLS, user), "mobile", NULL);
     }
   }
+  debug("p2tgl_prpl_got_user_status(): -> purple_prpl_got_user_status()");
+
+  debug("p2tgl_prpl_got_user_status(): out");
 }
 
 void p2tgl_conv_add_user (struct tgl_state *TLS, PurpleConversation *conv, int user, char *message, int flags,

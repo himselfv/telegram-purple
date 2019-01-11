@@ -64,6 +64,7 @@ int tgp_chat_get_last_server_id (struct tgl_state *TLS, tgl_peer_id_t chat) {
 }
 
 PurpleChat *tgp_chat_blist_store (struct tgl_state *TLS, tgl_peer_t *P, const char *group) {
+  debug("tgp_chat_blist_store(): in");
   g_return_val_if_fail(tgl_get_peer_type (P->id) == TGL_PEER_CHAT || tgl_get_peer_type (P->id) == TGL_PEER_CHANNEL, NULL);
 
   PurpleChat *PC = tgp_blist_chat_find (TLS, P->id);
@@ -78,6 +79,7 @@ PurpleChat *tgp_chat_blist_store (struct tgl_state *TLS, tgl_peer_t *P, const ch
       }
 #endif
     }
+    debug("tgp_chat_blist_store(): -> tgp_info_update_photo()");
     tgp_info_update_photo (&PC->node, tgl_peer_get (TLS, P->id));
   } else {
     if (PC) {
@@ -95,6 +97,7 @@ PurpleChat *tgp_chat_blist_store (struct tgl_state *TLS, tgl_peer_t *P, const ch
         g_strdup (tgl_get_peer_type (P->id) == TGL_PEER_CHANNEL ? P->channel.title : P->chat.title));
   }
 
+  debug("tgp_chat_blist_store(): out");
   return PC;
 }
 
@@ -660,6 +663,7 @@ int tgp_channel_loaded (struct tgl_state *TLS, tgl_peer_id_t id) {
 }
 
 static void update_chat (struct tgl_state *TLS, tgl_peer_t *C, unsigned flags, const char *group) {
+  debug("update_chat(): in");
   if (flags & TGL_UPDATE_CREATED) {
     tgp_blist_lookup_add (TLS, C->id, C->print_name);
     tgp_chat_blist_store (TLS, tgl_peer_get (TLS, C->id), group);
@@ -673,10 +677,12 @@ static void update_chat (struct tgl_state *TLS, tgl_peer_t *C, unsigned flags, c
         purple_blist_remove_chat (PC);
       }
       if (flags & TGL_UPDATE_PHOTO) {
+	debug("update_chat(): -> tgp_info_update_photo()");
         tgp_info_update_photo (&PC->node, tgl_peer_get (TLS, C->id));
       }
     }
   }
+  debug("update_chat(): out");
 }
 
 void update_channel_handler (struct tgl_state *TLS, struct tgl_channel *C, unsigned flags) {

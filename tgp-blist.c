@@ -1,4 +1,4 @@
-/* 
+/*
  This file is part of telegram-purple
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -153,6 +153,7 @@ PurpleBuddy *tgp_blist_buddy_find (struct tgl_state *TLS, tgl_peer_id_t user) {
 // contacts
 
 void tgp_blist_contact_add (struct tgl_state *TLS, struct tgl_user *U) {
+  debug("tgp_blist_contact_add(): in");
   PurpleBuddy *buddy = tgp_blist_buddy_find (TLS, U->id);
   
   if (! buddy) {
@@ -162,9 +163,11 @@ void tgp_blist_contact_add (struct tgl_state *TLS, struct tgl_user *U) {
     buddy = tgp_blist_buddy_new (TLS, P);
     purple_blist_add_buddy (buddy, NULL, tgp_blist_group_init (_("Telegram")), NULL);
     
+    debug("tgp_blist_contact_add(): -> tgp_info_update_photo()");
     tgp_info_update_photo (&buddy->node, P);
   }
   p2tgl_prpl_got_user_status (TLS, U->id, &U->status);
+  debug("tgp_blist_contact_add(): out");
 }
 
 // chats

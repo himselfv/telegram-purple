@@ -63,6 +63,7 @@ struct tgl_update_callback tgp_callback = {
 };
 
 static void _update_buddy (struct tgl_state *TLS, tgl_peer_t *user, unsigned flags) {
+  debug("_update_buddy: in()");
   PurpleBuddy *buddy = tgp_blist_buddy_find (TLS, user->id);
   if (buddy) {
     if (flags & TGL_UPDATE_DELETED) {
@@ -79,6 +80,7 @@ static void _update_buddy (struct tgl_state *TLS, tgl_peer_t *user, unsigned fla
       }
     }
   }
+  debug("_update_buddy: out()");
 }
 
 static void update_user_handler (struct tgl_state *TLS, struct tgl_user *user, unsigned flags) {
@@ -136,7 +138,9 @@ static void update_user_handler (struct tgl_state *TLS, struct tgl_user *user, u
       }
       
       if (buddy) {
+        debug("update_user_handler(): -> p2tgl_prpl_got_user_status()");
         p2tgl_prpl_got_user_status (TLS, user->id, &user->status);
+        debug("update_user_handler(): -> tgp_info_update_photo()");
         tgp_info_update_photo (&buddy->node, tgl_peer_get (TLS, user->id));
       }
     }
@@ -144,6 +148,8 @@ static void update_user_handler (struct tgl_state *TLS, struct tgl_user *user, u
     // peer was not created, but altered in some way
     _update_buddy (TLS, (tgl_peer_t *)user, flags);
   }
+
+  debug("update_user_handler(): out");
 }
 
 static void update_secret_chat_handler (struct tgl_state *TLS, struct tgl_secret_chat *U, unsigned flags) {
@@ -165,6 +171,7 @@ static void update_secret_chat_handler (struct tgl_state *TLS, struct tgl_secret
         write_secret_chat_file (TLS);
 
         tgp_msg_special_out (TLS , _("Secret chat terminated.") , U->id, PURPLE_MESSAGE_SYSTEM);
+        debug("update_secret_chat_handler(): -> purple_prpl_got_user_status()");
         purple_prpl_got_user_status (tls_get_pa (TLS), tgp_blist_lookup_purple_name (TLS, U->id), "offline", NULL);
         purple_blist_remove_buddy (buddy);
       } else {
@@ -190,10 +197,14 @@ static void update_secret_chat_handler (struct tgl_state *TLS, struct tgl_secret
       request_accept_secret_chat (TLS, U);
     }
   }
+
+  debug("update_secret_chat_handler(): out");
 }
 
 static void update_user_status_handler (struct tgl_state *TLS, struct tgl_user *U) {
+  debug("update_user_status_handler(): in");
   p2tgl_prpl_got_user_status (TLS, U->id, &U->status);
+  debug("update_user_status_handler(): out");
 }
 
 static void update_message_handler (struct tgl_state *TLS, struct tgl_message *M) {
