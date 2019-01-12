@@ -38,6 +38,19 @@ PurpleBlistNode *tgp_blist_iterate (struct tgl_state *TLS,
 
 // lookup
 
+#ifdef TGP_USE_IDS_AS_NAMES
+/*
+If we use PeerIDs as names we want to adjust these functions to avoid changing the
+calls to them everywhere.
+Normally clients will ask us for whatever name libpurple gives to them, so simply
+storing id->"id" instead of id->"print_name" should mostly work.
+
+But some will go out of their way to query:
+  tgp_blist_lookup_peer_get(my_get_peer_print_name(..));
+To transparently handle this we need to store BOTH "id"->id and "print_name"->id.
+*/
+#endif
+
 const char *tgp_blist_lookup_purple_name (struct tgl_state *TLS, tgl_peer_id_t id) {
   const char *name = g_hash_table_lookup (tls_get_data (TLS)->id_to_purple_name,
       GINT_TO_POINTER(tgl_get_peer_id (id)));
@@ -46,13 +59,24 @@ const char *tgp_blist_lookup_purple_name (struct tgl_state *TLS, tgl_peer_id_t i
 }
 
 void tgp_blist_lookup_add (struct tgl_state *TLS, tgl_peer_id_t id, const char *purple_name) {
-  
   // to avoid issues with differences in string normalization, always store in composed form this helps to avoid
   // issues with clients like Adium, that will store strings in decomposed format by default
   const char *name = g_utf8_normalize (purple_name, -1, G_NORMALIZE_DEFAULT_COMPOSE);
 
+#ifdef TGP_USE_IDS_AS_NAMES
+  char* id_name = tgp_format_peer_id(id);
+  g_hash_table_replace (tls_get_data (TLS)->id_to_purple_name, GINT_TO_POINTER(tgl_get_peer_id (id)),
+      g_strdup (id_name));
+  //Store "id"->id
+  g_hash_table_replace (tls_get_data (TLS)->purple_name_to_id, g_strdup (id_name),
+      g_memdup (&id, sizeof(tgl_peer_id_t)));
+  free(id_name);
+#else
   g_hash_table_replace (tls_get_data (TLS)->id_to_purple_name, GINT_TO_POINTER(tgl_get_peer_id (id)),
       g_strdup (name));
+#endif
+
+  //Always store "print_name"->id
   g_hash_table_replace (tls_get_data (TLS)->purple_name_to_id, g_strdup (name),
       g_memdup (&id, sizeof(tgl_peer_id_t)));
 }
@@ -94,14 +118,26 @@ void tgp_blist_lookup_init (struct tgl_state *TLS) {
 // buddies
 
 PurpleBuddy *tgp_blist_buddy_new  (struct tgl_state *TLS, tgl_peer_t *user) {
+#ifdef TGP_USE_IDS_AS_NAMES
+  char* peername = tgp_format_peer_id(user->id);
+  PurpleBuddy *buddy = purple_buddy_new (tls_get_pa (TLS), peername, tgp_blist_lookup_purple_name (TLS, user->id));
+  free(peername);
+#else
   PurpleBuddy *buddy = purple_buddy_new (tls_get_pa (TLS), tgp_blist_lookup_purple_name (TLS, user->id), NULL);
+#endif
   tgp_blist_buddy_set_id (buddy, user->id);
   return buddy;
 }
 
 PurpleBuddy *tgp_blist_buddy_migrate (struct tgl_state *TLS, PurpleBuddy *buddy, struct tgl_user *user) {
   purple_blist_remove_buddy (buddy);
+#ifdef TGP_USE_IDS_AS_NAMES
+  char* peername = tgp_format_peer_id(user->id);
+  buddy = purple_buddy_new (tls_get_pa (TLS), peername, user->print_name);
+  free(peername);
+#else
   buddy = purple_buddy_new (tls_get_pa (TLS), user->print_name, NULL);
+#endif
   tgp_blist_buddy_set_id (buddy, user->id);
   purple_blist_add_buddy (buddy, NULL, tgp_blist_group_init (_("Telegram")), NULL);
   return buddy;

@@ -27,6 +27,14 @@
 #define TGP_BUDDY_KEY_PEER_ID "user_id"
 #define TGP_BUDDY_KEY_PEER_TYPE "peer_type"
 
+/*
+Instructs telegram-purple to use telegram PeerIDs as buddy names, instead of 
+their nicknames. You can still set aliases.
+This is useful if you run telegram-purple as an XMPP proxy, or simply want clear unique buddy names.
+*/
+#define TGP_USE_IDS_AS_NAMES
+
+
 /* Functions for managing telegram contacts in the buddy list and performing id to purple-username and
  purple-username to id look-ups.
  

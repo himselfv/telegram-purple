@@ -20,6 +20,23 @@
 
 #include "telegram-purple.h"
 
+//Convers raw peer ID to a text suitable for use as a contact ID
+//Remember to free the buffer!
+char* tgp_format_peer_id(tgl_peer_id_t id)
+{
+  char* ret = (char*)malloc(32);
+  switch (id.peer_type) {
+  case TGL_PEER_USER: ret[0] = 'u'; break;
+  case TGL_PEER_CHANNEL: ret[0] = 'n'; break;
+  case TGL_PEER_CHAT: ret[0] = 'g'; break;
+  case TGL_PEER_ENCR_CHAT: ret[0] = 'e'; break;
+  default: ret[0] = 'z'; break;
+  }
+  snprintf(&ret[1], 30, "%d", id.peer_id);
+  ret[31] = '\n';
+  return ret;
+}
+
 const char *format_time (time_t date) {
   // TODO: Inline this function for better readability?
   struct tm *datetime = localtime(&date);

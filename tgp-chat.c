@@ -69,7 +69,13 @@ PurpleChat *tgp_chat_blist_store (struct tgl_state *TLS, tgl_peer_t *P, const ch
   PurpleChat *PC = tgp_blist_chat_find (TLS, P->id);
   if (! (P->flags & TGLCF_LEFT)) {
     if (! PC) {
+#ifdef TGP_USE_IDS_AS_NAMES
+      char* peername = tgp_format_peer_id(P->id);
+      PC = purple_chat_new (tls_get_pa (TLS), peername, tgp_chat_info_new (TLS, P));
+      free(peername);
+#else
       PC = purple_chat_new (tls_get_pa (TLS), P->chat.print_title, tgp_chat_info_new (TLS, P));
+#endif
       // adding chats to the blist in Adium would cause the bookmarks and auto-joins to fail,
       // as Adium assumes that a chat existing in blist means the user already joined
 #ifndef __ADIUM_
@@ -186,15 +192,23 @@ PurpleConversation *tgp_chat_show (struct tgl_state *TLS, tgl_peer_t *P) {
   }
 
   // join the chat now
+#ifdef TGP_USE_IDS_AS_NAMES
+  char *peername  = tgp_format_peer_id(P->id);
+  g_return_val_if_fail(peername, NULL);
+
+  conv = serv_got_joined_chat (tls_get_conn (TLS), tgl_get_peer_id (P->id), peername);
+  free(peername);
+#else
   const char *name = NULL;
   if (tgl_get_peer_type (P->id) == TGL_PEER_CHAT) {
-    name = P->chat.print_title;
+     name = P->chat.print_title;
   } else if (tgl_get_peer_type (P->id) == TGL_PEER_CHANNEL) {
     name = P->channel.print_title;
   }
   g_return_val_if_fail(name, NULL);
-  
+
   conv = serv_got_joined_chat (tls_get_conn (TLS), tgl_get_peer_id (P->id), name);
+#endif
   g_return_val_if_fail(conv, NULL);
 
   purple_conv_chat_clear_users (purple_conversation_get_chat_data (conv));
@@ -410,8 +424,14 @@ static void tgp_chat_roomlist_add (tgl_peer_t *P, void *extra) {
   if ((tgl_get_peer_type (P->id) == TGL_PEER_CHAT || tgl_get_peer_type (P->id) == TGL_PEER_CHANNEL)
       && !(P->flags & TGLPF_LEFT)) {
     char *id = g_strdup_printf ("%d", tgl_get_peer_id (P->id));
-    
+
+#ifdef TGP_USE_IDS_AS_NAMES
+    char* peername = tgp_format_peer_id(P->id);
+    PurpleRoomlistRoom *room = purple_roomlist_room_new (PURPLE_ROOMLIST_ROOMTYPE_ROOM, peername, NULL);
+    free(peername);
+#else
     PurpleRoomlistRoom *room = purple_roomlist_room_new (PURPLE_ROOMLIST_ROOMTYPE_ROOM, P->chat.print_title, NULL);
+#endif
     purple_roomlist_room_add_field (conn->roomlist, room, id);
     if (tgl_get_peer_type (P->id) == TGL_PEER_CHANNEL) {
       purple_roomlist_room_add_field (conn->roomlist, room, GINT_TO_POINTER(0));

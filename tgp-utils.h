@@ -27,6 +27,8 @@
 #include <tgl.h>
 #include <glib.h>
 
+char* tgp_format_peer_id(tgl_peer_id_t id);
+
 tgl_peer_t *tgp_encr_chat_get_partner (struct tgl_state *TLS, struct tgl_secret_chat *chat);
 
 /**
