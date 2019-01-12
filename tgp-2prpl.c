@@ -142,20 +142,48 @@ void p2tgl_prpl_got_user_status (struct tgl_state *TLS, tgl_peer_id_t user, stru
   debug("p2tgl_prpl_got_user_status(): in");
   connection_data *data = TLS->ev_base;
 
+  PurpleAccount* pa = tls_get_pa (TLS);
+  const char* pname = tgp_blist_lookup_purple_name (TLS, user);
+  debug("p2tgl_prpl_got_user_status(): pa=%x, pname=%s", (uint64_t)(pa), pname);
+
   if (status->online == 1) {
-    purple_prpl_got_user_status (tls_get_pa (TLS), tgp_blist_lookup_purple_name (TLS, user), "available", NULL);
+    purple_prpl_got_user_status (pa, pname, "available", NULL);
   } else {
     debug ("%d: when=%d", tgl_get_peer_id (user), status->when);
     if (tgp_time_n_days_ago (
           purple_account_get_int (data->pa, TGP_KEY_INACTIVE_DAYS_OFFLINE, TGP_DEFAULT_INACTIVE_DAYS_OFFLINE)) > status->when && status->when) {
       debug ("offline");
-      purple_prpl_got_user_status (tls_get_pa (TLS), tgp_blist_lookup_purple_name (TLS, user), "offline", NULL);
+      purple_prpl_got_user_status (pa, pname, "offline", NULL);
     } else {
       debug ("mobile");
-      purple_prpl_got_user_status (tls_get_pa (TLS), tgp_blist_lookup_purple_name (TLS, user), "mobile", NULL);
+      purple_prpl_got_user_status (pa, pname, "mobile", NULL);
     }
   }
   debug("p2tgl_prpl_got_user_status(): -> purple_prpl_got_user_status()");
+
+  //Lets verify what we have set
+  PurpleBuddy* buddy = purple_find_buddy(pa, pname);
+  if (!buddy) {
+      debug("p2tgl_prpl_got_user_status(): !buddy, out");
+      return;
+  }
+  PurplePresence* pres = purple_buddy_get_presence(buddy);
+  if (!pres) {
+      debug("p2tgl_prpl_got_user_status(): !presence, out");
+      return;
+  }
+  PurpleStatus* stat = purple_presence_get_active_status(pres);
+  if (!stat) {
+      debug("p2tgl_prpl_got_user_status(): !status, out");
+      return;
+  }
+  PurpleStatusType* stype = purple_status_get_type(stat);
+  if (!stype) {
+      debug("p2tgl_prpl_got_user_status(): !stype, out");
+      return;
+  }
+  debug("p2tgl_prpl_got_user_status(): active status type: principal=%d, id=%s, name=%s", purple_status_type_get_primitive(stype),
+    purple_status_type_get_id(stype), purple_status_type_get_name(stype));
 
   debug("p2tgl_prpl_got_user_status(): out");
 }
