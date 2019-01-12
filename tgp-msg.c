@@ -859,11 +859,14 @@ static time_t tgp_msg_oldest_relevant_ts (struct tgl_state *TLS) {
 static void tgp_msg_process_in_ready (struct tgl_state *TLS) {
   connection_data *conn = TLS->ev_base;
   struct tgp_msg_loading *C;
+  debug("tgp_msg_process_in_ready()");
   
   while ((C = g_queue_peek_head (conn->new_messages))) {
     if (C->pending) {
+      debug("tgp_msg_process_in_ready: head %#010x ->pending=%d", C, C->pending);
       break;
     }
+    debug("tgp_msg_process_in_ready: head ok, PROCESSING HEAD");
     g_queue_pop_head (conn->new_messages);
     
     tgp_msg_display (TLS, C);
@@ -878,6 +881,7 @@ static void tgp_msg_process_in_ready (struct tgl_state *TLS) {
     }
     
     tgp_msg_loading_free (C);
+    debug("tgp_msg_process_in_ready: head processed, moving on");
   }
   pending_reads_send_all (TLS);
 
@@ -898,6 +902,7 @@ static void tgp_msg_on_loaded_document (struct tgl_state *TLS, void *extra, int 
   }
   
   -- C->pending;
+  debug("tgp_msg_on_loaded_document: --pending=%d", C->pending);
   tgp_msg_process_in_ready (TLS);
 }
 
@@ -911,15 +916,16 @@ static void tgp_msg_on_loaded_chat_full (struct tgl_state *TLS, void *extra, int
 
   struct tgp_msg_loading *C = extra;
   -- C->pending;
-  
+  debug("tgp_msg_on_loaded_chat_full: --pending=%d", C->pending);
   tgp_msg_process_in_ready (TLS);
 }
 
 static void tgp_msg_on_loaded_channel_history (struct tgl_state *TLS, void *extra, int success, tgl_peer_t *P) {
+  debug ("tgp_msg_on_loaded_channel_history()");
 
   struct tgp_msg_loading *C = extra;
   -- C->pending;
-
+  debug("tgp_msg_on_loaded_channel_history: --pending=%d", C->pending);
   tgp_msg_process_in_ready (TLS);
 }
 
@@ -938,6 +944,7 @@ static void tgp_msg_on_loaded_user_full (struct tgl_state *TLS, void *extra, int
 
   struct tgp_msg_loading *C = extra;
   -- C->pending;
+  debug("tgp_msg_on_loaded_user_full: --pending=%d", C->pending);
   tgp_msg_process_in_ready (TLS);
 }
 */
@@ -953,10 +960,12 @@ void tgp_msg_recv (struct tgl_state *TLS, struct tgl_message *M, GList *before) 
   debug ("tgp_msg_recv before=%p server_id=%lld", before, M->server_id);
   
   if (M->flags & (TGLMF_EMPTY | TGLMF_DELETED)) {
+    debug ("tgp_msg_recv: empty, exiting");
     return;
   }
 
   if (!(M->flags & TGLMF_CREATED)) {
+    debug ("tgp_msg_recv: !created, exiting");
     return;
   }
 
@@ -980,7 +989,7 @@ void tgp_msg_recv (struct tgl_state *TLS, struct tgl_message *M, GList *before) 
     
     if (! tgp_channel_loaded (TLS, id)) {
       ++ C->pending;
-      
+      debug("tgp_msg_recv: this is a channel message, !tgp_channel_loaded => ++pending=%d; tgp_channel_load()", C->pending);
       tgp_channel_load (TLS, tgl_peer_get (TLS, id), tgp_msg_on_loaded_channel_history, C);
     }
     
@@ -995,15 +1004,20 @@ void tgp_msg_recv (struct tgl_state *TLS, struct tgl_message *M, GList *before) 
   
   if (! (M->flags & TGLMF_SERVICE)) {
 
+    debug("tgp_msg_recv: TGLMF_SERVICE");
+    
     // handle all messages that need to load content before they can be displayed
     if (M->media.type != tgl_message_media_none) {
+      debug("tgp_msg_recv: media.type!=none");
       switch (M->media.type) {
         case tgl_message_media_photo: {
+          debug("tgp_msg_recv: media_photo");
           
           // include the "bad photo" check from telegram-cli interface.c:3287 to avoid crashes
           // when fetching history. TODO: find out the reason for this behavior
           if (M->media.photo) {
             ++ C->pending;
+            debug("tgp_msg_recv: ++pending=%d; tgl_do_load_photo()", C->pending);
             tgl_do_load_photo (TLS, M->media.photo, tgp_msg_on_loaded_document, C);
           }
           break;
@@ -1014,8 +1028,10 @@ void tgp_msg_recv (struct tgl_state *TLS, struct tgl_message *M, GList *before) 
         case tgl_message_media_document:
         case tgl_message_media_video:
         case tgl_message_media_audio:
+          debug("tgp_msg_recv: media_document");
           if (M->media.document->flags & (TGLDF_STICKER | TGLDF_IMAGE)) {
             ++ C->pending;
+            debug("tgp_msg_recv: STICKER | IMAGE => ++pending=%d; tgl_do_load_document()", C->pending);
             tgl_do_load_document (TLS, M->media.document, tgp_msg_on_loaded_document, C);
             
           } else {
@@ -1027,14 +1043,19 @@ void tgp_msg_recv (struct tgl_state *TLS, struct tgl_message *M, GList *before) 
               ++ C->pending;
 
               if (M->media.document->flags & TGLDF_AUDIO) {
+                debug("tgp_msg_recv: AUDIO <= threshold => pending++; tgl_do_load_audio");
                 tgl_do_load_audio (TLS, M->media.document, tgp_msg_on_loaded_document, C);
 
               } else if (M->media.document->flags & TGLDF_VIDEO) {
+                debug("tgp_msg_recv: VIDEO <= threshold => pending++; tgl_do_load_video");
                 tgl_do_load_video (TLS, M->media.document, tgp_msg_on_loaded_document, C);
 
               } else {
+                debug("tgp_msg_recv: OTHER document <= threshold => pending++; tgl_do_load_document");
                 tgl_do_load_document (TLS, M->media.document, tgp_msg_on_loaded_document, C);
               }
+            } else {
+                debug("tgp_msg_recv: document !(STICKER|IMAGE) and >= size threshold => ignoring");
             }
 
 #endif
@@ -1044,15 +1065,20 @@ void tgp_msg_recv (struct tgl_state *TLS, struct tgl_message *M, GList *before) 
         case tgl_message_media_document_encr:
           if (M->media.encr_document->flags & TGLDF_STICKER || M->media.encr_document->flags & TGLDF_IMAGE) {
             ++ C->pending;
+            debug("tgp_msg_recv: media_document_encr STICKER | IMAGE => ++pending=%d; tgl_do_load_encr_document()", C->pending);
             tgl_do_load_encr_document (TLS, M->media.encr_document, tgp_msg_on_loaded_document, C);
+          } else {
+            debug("tgp_msg_recv: media_document_encr !STICKER & !IMAGE => ignoring");
           }
           break;
 
         case tgl_message_media_geo:
+          debug("tgp_msg_recv: media_geo => ignoring");
           // TODO: load geo thumbnail
           break;
 
         default:
+          debug("tgp_msg_recv: unknown message_media type => ignoring");
           // prevent Clang warnings ...
           break;
       }
@@ -1071,12 +1097,13 @@ void tgp_msg_recv (struct tgl_state *TLS, struct tgl_message *M, GList *before) 
   if (! g_hash_table_lookup (tls_get_data (TLS)->pending_chat_info, to_ptr)) {
 
     if (tgl_get_peer_type (M->to_id) == TGL_PEER_CHAT) {
+
       tgl_peer_t *P = tgl_peer_get (TLS, M->to_id);
       g_warn_if_fail(P);
 
       if (P && ! P->chat.user_list_size) {
         ++ C->pending;
-
+        debug("tgp_msg_recv: need to get TGL_PEER_CHAT info, ++pending=%d; tgl_do_get_chat_info()", C->pending);
         tgl_do_get_chat_info (TLS, M->to_id, FALSE, tgp_msg_on_loaded_chat_full, C);
         g_hash_table_replace (tls_get_data (TLS)->pending_chat_info, to_ptr, to_ptr);
       }
@@ -1094,9 +1121,10 @@ void tgp_msg_recv (struct tgl_state *TLS, struct tgl_message *M, GList *before) 
   GList *b = g_queue_find (tls_get_data (TLS)->new_messages, before);
   if (b) {
     struct tgp_msg_loading *M = before->data;
-    debug ("inserting before server_id=%lld", M->msg->server_id);
+    debug ("tgp_msg_recv: inserting %#010x before server_id=%lld", C, M->msg->server_id);
     g_queue_insert_before (tls_get_data (TLS)->new_messages, b, C);
   } else {
+    debug ("tgp_msg_recv: inserting %#010x as tail", C);
     g_queue_push_tail (tls_get_data (TLS)->new_messages, C);
   }
   tgp_msg_process_in_ready (TLS);

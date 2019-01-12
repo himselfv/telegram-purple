@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <glib.h>
 #include <eventloop.h>
+#include "msglog.h"
 
 struct tgl_timer {
   struct tgl_state *TLS;
@@ -31,6 +32,7 @@ struct tgl_timer {
 
 static int timer_alarm (gpointer arg) {
   struct tgl_timer *t = arg;
+  debug("timer_alarm: %08x", t);
   t->fd = -1;
   t->cb (t->TLS, t->arg);
   return FALSE;
@@ -38,6 +40,7 @@ static int timer_alarm (gpointer arg) {
 
 static struct tgl_timer *tgl_timer_alloc (struct tgl_state *TLS, void (*cb)(struct tgl_state *TLS, void *arg), void *arg) {
   struct tgl_timer *t = malloc (sizeof (*t));
+  debug("tgl_timer_alloc() -> %08x", t);
   t->TLS = TLS;
   t->cb = cb;
   t->arg = arg;
@@ -48,6 +51,7 @@ static struct tgl_timer *tgl_timer_alloc (struct tgl_state *TLS, void (*cb)(stru
 static void tgl_timer_delete (struct tgl_timer *t);
 
 static void tgl_timer_insert (struct tgl_timer *t, double p) {
+  debug("tgl_timer_insert(%08x, %f)", t, p);
   tgl_timer_delete (t);
   if (p < 0) { p = 0; }
   if (p < 1) {
@@ -58,6 +62,7 @@ static void tgl_timer_insert (struct tgl_timer *t, double p) {
 }
 
 static void tgl_timer_delete (struct tgl_timer *t) {
+  debug("tgl_timer_delete(%08x)", t);
   if (t->fd >= 0) {
     purple_timeout_remove (t->fd);
     t->fd = -1;
@@ -65,6 +70,7 @@ static void tgl_timer_delete (struct tgl_timer *t) {
 }
 
 static void tgl_timer_free (struct tgl_timer *t) {
+  debug("tgl_timer_free(%08x)", t);
   if (t->fd >= 0) {
     tgl_timer_delete (t);
   }

@@ -504,6 +504,7 @@ static void tgp_channel_loading_free (struct tgp_channel_loading *D) {
 static void tgp_channel_load_finish (struct tgl_state *TLS, struct tgp_channel_loading *D, int success) {
   GList *cb = D->callbacks;
   GList *extra = D->extras;
+  debug("tgp_channel_load_finish()");
 
   if (! g_list_length (D->members)) {
     struct tgp_channel_member *M = talloc0 (sizeof(struct tgp_channel_member));
@@ -522,6 +523,7 @@ static void tgp_channel_load_finish (struct tgl_state *TLS, struct tgp_channel_l
     extra = g_list_next(extra);
   }
 
+  debug("tgp_channel_load_finish: tgp_channel_loading_free()");
   tgp_channel_loading_free (D);
 }
 
@@ -532,6 +534,7 @@ static void tgp_channel_load_admins_done (struct tgl_state *TLS, void *extra, in
   struct tgp_channel_loading *D = extra;
   
   if (success) {
+    debug("tgp_channel_load_admins_done: success");
     GHashTable *HT = g_hash_table_new (g_direct_hash, g_direct_equal);
     int i;
     for (i = 0; i < users_num; i ++) {
@@ -546,8 +549,11 @@ static void tgp_channel_load_admins_done (struct tgl_state *TLS, void *extra, in
       }
     } while ((MS = g_list_next (MS)));
     g_hash_table_destroy (HT);
+  } else {
+    debug("tgp_channel_load_admins_done: !success");
   }
-  
+
+  debug("tgp_channel_load_admins_done: tgp_channel_load_finish()");
   tgp_channel_load_finish (TLS, D, success);
 }
 
@@ -557,6 +563,7 @@ static void tgp_channel_get_members_done (struct tgl_state *TLS, void *extra, in
   struct tgp_channel_loading *D = extra;
   
   if (! success) {
+    debug("tgp_channel_load_members_done: !success, finishing => tgp_channel_load_finish()");
     tgp_channel_load_finish (TLS, D, FALSE);
     return;
   }
@@ -567,7 +574,8 @@ static void tgp_channel_get_members_done (struct tgl_state *TLS, void *extra, in
     M->id = users[i]->id;
     D->members = g_list_append (D->members, M);
   }
-  
+
+  debug("tgp_channel_load_members_done: loading admins; tgl_do_channel_get_members(tgp_channel_load_admins_done)");  
   tgl_do_channel_get_members (TLS, D->P->id,
       purple_account_get_int (tls_get_pa (TLS), TGP_KEY_CHANNEL_MEMBERS, TGP_DEFAULT_CHANNEL_MEMBERS),
       0, 1, tgp_channel_load_admins_done, D);
@@ -580,8 +588,10 @@ static gint tgp_channel_find_higher_id (gconstpointer a, gconstpointer b) {
 static void tgp_channel_get_history_done (struct tgl_state *TLS, void *extra, int success, int size,
                 struct tgl_message **list) {
   struct tgp_channel_loading *D = extra;
+  debug("tgp_channel_get_history_done(): success=%d", success);
 
   if (success) {
+    debug("tgp_channel_get_history_done(): success");
     if (size > 0 && tgp_chat_get_last_server_id (TLS, D->P->id) < list[size - 1]->server_id) {
       tgp_chat_set_last_server_id (TLS, D->P->id, (int) list[size - 1]->server_id);
     }
@@ -595,14 +605,17 @@ static void tgp_channel_get_history_done (struct tgl_state *TLS, void *extra, in
       }
     }
   } else {
+    debug("tgp_channel_get_history_done: !success, CANNOT LOAD PART OF HISTORY");
     g_warn_if_reached(); // gap in history
   }
 
   if (D->P->flags & (TGLCHF_ADMIN | TGLCHF_MEGAGROUP)) {
+    debug("tgp_channel_get_history_done(): members route, tgl_do_channel_get_members()");
     tgl_do_channel_get_members (TLS, D->P->id,
         purple_account_get_int (tls_get_pa (TLS), TGP_KEY_CHANNEL_MEMBERS, TGP_DEFAULT_CHANNEL_MEMBERS),
         0, 0, tgp_channel_get_members_done, extra);
   } else {
+    debug("tgp_channel_get_history_done(): finish route, tgp_channel_load_finish()");
     tgp_channel_load_finish (TLS, D, success);
   }
 }
@@ -610,27 +623,32 @@ static void tgp_channel_get_history_done (struct tgl_state *TLS, void *extra, in
 void tgp_channel_load (struct tgl_state *TLS, tgl_peer_t *P,
         void (*callback) (struct tgl_state *, void *, int, tgl_peer_t *),
         void *extra) {
+  debug("tgp_channel_load()");
   g_return_if_fail(tgl_get_peer_type (P->id) == TGL_PEER_CHANNEL);
   
   gpointer ID = GINT_TO_POINTER(tgl_get_peer_id (P->id));
   if (! g_hash_table_lookup (tls_get_data (TLS)->pending_channels, ID)) {
-    
+
+    debug("tgp_channel_load: initiating new loading");
     struct tgp_channel_loading *D = talloc0 (sizeof(struct tgp_channel_loading));
     D->P = P;
     D->callbacks = g_list_append (NULL, callback);
     D->extras = g_list_append (NULL, extra);
     D->remaining = 2;
 
+    debug("tgp_channel_load: tgl_do_get_history_range()");
     tgl_do_get_history_range (TLS, P->id, (int) tgp_chat_get_last_server_id (TLS, P->id), 0,
         TGP_CHANNEL_HISTORY_LIMIT, tgp_channel_get_history_done, D);
     g_hash_table_replace (tls_get_data (TLS)->pending_channels, ID, D);
 
   } else {
     if (! tgp_channel_loaded (TLS, P->id)) {
+      debug("tgp_channel_load: adding callback to existing loading");
       struct tgp_channel_loading *D = g_hash_table_lookup (tls_get_data (TLS)->pending_channels, ID);
       D->callbacks = g_list_append (D->callbacks, callback);
       D->extras = g_list_append (D->extras, extra);
     } else {
+      debug("tgp_channel_load: already loaded, calling callback");
       callback (TLS, extra, TRUE, P);
     }
   }
