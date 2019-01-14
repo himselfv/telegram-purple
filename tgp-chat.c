@@ -333,7 +333,12 @@ GList *tgprpl_chat_join_info (PurpleConnection *gc) {
 GHashTable *tgprpl_chat_info_defaults (PurpleConnection *gc, const char *chat_name) {
   debug ("tgprpl_chat_info_defaults()");
   if (chat_name) {
+#ifdef TGP_USE_IDS_AS_NAMES
+    tgl_peer_t *P = tgp_blist_lookup_peer_get (gc_get_tls (gc), chat_name);
+    //In fact this could've been used for the normal case too
+#else
     tgl_peer_t *P = tgl_peer_get_by_name (gc_get_tls (gc), chat_name);
+#endif
     if (P) {
       return tgp_chat_info_new (gc_get_tls (gc), P);
     }
