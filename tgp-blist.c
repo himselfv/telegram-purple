@@ -51,13 +51,17 @@ void tgp_blist_lookup_add (struct tgl_state *TLS, tgl_peer_id_t id, const char *
   // issues with clients like Adium, that will store strings in decomposed format by default
   const char *name = g_utf8_normalize (purple_name, -1, G_NORMALIZE_DEFAULT_COMPOSE);
 
+  debug("blist_lookup: Adding %d->%s", id.peer_id, name);
   g_hash_table_replace (tls_get_data (TLS)->id_to_purple_name, GINT_TO_POINTER(tgl_get_peer_id (id)),
       g_strdup (name));
+
+  debug("blist_lookup: Adding %s->%d", name, id.peer_id);
   g_hash_table_replace (tls_get_data (TLS)->purple_name_to_id, g_strdup (name),
       g_memdup (&id, sizeof(tgl_peer_id_t)));
 }
 
 static tgl_peer_id_t *tgp_blist_lookup_get_id (struct tgl_state *TLS, const char *purple_name) {
+  debug("blist_lookup: Looking up %s", purple_name);
   return g_hash_table_lookup (tls_get_data (TLS)->purple_name_to_id,
       g_utf8_normalize (purple_name, -1, G_NORMALIZE_DEFAULT_COMPOSE));
 }

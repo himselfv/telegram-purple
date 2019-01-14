@@ -320,7 +320,7 @@ GList *tgprpl_chat_join_info (PurpleConnection *gc) {
 }
 
 GHashTable *tgprpl_chat_info_defaults (PurpleConnection *gc, const char *chat_name) {
-  debug ("tgprpl_chat_info_defaults()");
+  debug ("tgprpl_chat_info_defaults(): chat_name=%s", chat_name);
   if (chat_name) {
     tgl_peer_t *P = tgl_peer_get_by_name (gc_get_tls (gc), chat_name);
     if (P) {
