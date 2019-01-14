@@ -420,6 +420,7 @@ static void tgp_chat_roomlist_add (tgl_peer_t *P, void *extra) {
       purple_roomlist_room_add_field (conn->roomlist, room, GINT_TO_POINTER(P->chat.users_num));
       purple_roomlist_room_add_field (conn->roomlist, room, _("Group"));
     }
+    purple_roomlist_room_add_field (conn->roomlist, room, P->print_name);
     purple_roomlist_room_add (conn->roomlist, room);
     
     g_free (id);
@@ -438,6 +439,9 @@ void tgp_chat_roomlist_populate (struct tgl_state *TLS) {
   fields = g_list_append (fields, f);
   
   f = purple_roomlist_field_new (PURPLE_ROOMLIST_FIELD_STRING, _("Type"), "type", FALSE);
+  fields = g_list_append (fields, f);
+  
+  f = purple_roomlist_field_new (PURPLE_ROOMLIST_FIELD_STRING, _("Topic"), "topic", FALSE);
   fields = g_list_append (fields, f);
   
   purple_roomlist_set_fields (conn->roomlist, fields);
