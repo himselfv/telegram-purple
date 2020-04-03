@@ -183,6 +183,7 @@ static void tgp_chat_add_all_users (struct tgl_state *TLS, PurpleConversation *c
 }
 
 PurpleConversation *tgp_chat_show (struct tgl_state *TLS, tgl_peer_t *P) {
+  debug ("tgp_chat_show()");
   PurpleConvChat *chat = NULL;
   
   // check if chat is already shown
@@ -190,18 +191,22 @@ PurpleConversation *tgp_chat_show (struct tgl_state *TLS, tgl_peer_t *P) {
   if (conv) {
     chat = purple_conversation_get_chat_data (conv);
     if (chat && ! purple_conv_chat_has_left (chat)) {
+      debug ("tgp_chat_show: existing conversation, exiting");
       return conv;
     }
+    debug ("tgp_chat_show: existing conversation, but no data / has left, continuing");
   }
 
   // join the chat now
 #ifdef TGP_USE_IDS_AS_NAMES
+  debug ("tgp_chat_show: use_ids_as_names");
   char *peername  = tgp_format_peer_id(P->id);
   g_return_val_if_fail(peername, NULL);
 
   conv = serv_got_joined_chat (tls_get_conn (TLS), tgl_get_peer_id (P->id), peername);
   free(peername);
 #else
+  debug ("tgp_chat_show: !use_ids_as_names");
   const char *name = NULL;
   if (tgl_get_peer_type (P->id) == TGL_PEER_CHAT) {
      name = P->chat.print_title;
@@ -212,8 +217,10 @@ PurpleConversation *tgp_chat_show (struct tgl_state *TLS, tgl_peer_t *P) {
 
   conv = serv_got_joined_chat (tls_get_conn (TLS), tgl_get_peer_id (P->id), name);
 #endif
+  debug ("tgp_chat_show: serv_got_joined_chat over, conv=%d", conv);
   g_return_val_if_fail(conv, NULL);
 
+  debug ("tgp_chat_show: will add users");
   purple_conv_chat_clear_users (purple_conversation_get_chat_data (conv));
   tgp_chat_add_all_users (TLS, conv, P);
 
