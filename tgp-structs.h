@@ -46,6 +46,7 @@ typedef struct {
   GHashTable *pending_chat_info;
   GHashTable *pending_channels;
   GHashTable *id_to_purple_name;
+  GHashTable *id_to_purple_nickname;  //may or may not be equal to name, depending on USE_IDS_AS_NAMES
   GHashTable *purple_name_to_id;
   GHashTable *channel_members;
   GList *pending_joins;

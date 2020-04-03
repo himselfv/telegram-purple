@@ -45,6 +45,7 @@ This is useful if you run telegram-purple as an XMPP proxy, or simply want clear
  Because of that, this plugin now uses the unique print names provided by libtgl as username instead. */
 
 const char *tgp_blist_lookup_purple_name (struct tgl_state *TLS, tgl_peer_id_t id);
+const char *tgp_blist_lookup_purple_nickname(struct tgl_state *TLS, tgl_peer_id_t id);
 void tgp_blist_lookup_add (struct tgl_state *TLS, tgl_peer_id_t id, const char *purple_name);
 tgl_peer_t *tgp_blist_lookup_peer_get (struct tgl_state *TLS, const char *purple_name);
 void tgp_blist_lookup_init (struct tgl_state *TLS);

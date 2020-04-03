@@ -147,7 +147,7 @@ static void tgp_chat_add_all_users (struct tgl_state *TLS, PurpleConversation *c
       int i;
       for (i = 0; i < C->user_list_size; i ++) {
         struct tgl_chat_user *uid = (C->user_list + i);
-        const char *name = tgp_blist_lookup_purple_name (TLS, TGL_MK_USER(uid->user_id));
+        const char *name = tgp_blist_lookup_purple_nickname (TLS, TGL_MK_USER(uid->user_id));
         if (name) {
           users = g_list_append (users, g_strdup (name));
           flags = g_list_append (flags, GINT_TO_POINTER(C->admin_id == uid->user_id ? PURPLE_CBFLAGS_FOUNDER : PURPLE_CBFLAGS_NONE));
@@ -162,7 +162,7 @@ static void tgp_chat_add_all_users (struct tgl_state *TLS, PurpleConversation *c
       
       while (MS) {
         struct tgp_channel_member *M = MS->data;
-        const char *name = tgp_blist_lookup_purple_name (TLS, M->id);
+        const char *name = tgp_blist_lookup_purple_nickname (TLS, M->id);
         if (name) {
           users = g_list_append (users, g_strdup (name));
           flags = g_list_append (flags, GINT_TO_POINTER(M->flags));

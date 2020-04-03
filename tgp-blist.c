@@ -51,11 +51,20 @@ To transparently handle this we need to store BOTH "id"->id and "print_name"->id
 */
 #endif
 
+//Returns whatever we use as purple usernames (depends on USE_IDS_AS_NAMES)
 const char *tgp_blist_lookup_purple_name (struct tgl_state *TLS, tgl_peer_id_t id) {
   const char *name = g_hash_table_lookup (tls_get_data (TLS)->id_to_purple_name,
       GINT_TO_POINTER(tgl_get_peer_id (id)));
   g_warn_if_fail(name);
   return name;
+}
+
+//Always returns a nickname
+const char *tgp_blist_lookup_purple_nickname(struct tgl_state *TLS, tgl_peer_id_t id) {
+	const char *name = g_hash_table_lookup(tls_get_data(TLS)->id_to_purple_nickname,
+		GINT_TO_POINTER(tgl_get_peer_id(id)));
+	g_warn_if_fail(name);
+	return name;
 }
 
 void tgp_blist_lookup_add (struct tgl_state *TLS, tgl_peer_id_t id, const char *purple_name) {
@@ -76,6 +85,9 @@ void tgp_blist_lookup_add (struct tgl_state *TLS, tgl_peer_id_t id, const char *
   g_hash_table_replace (tls_get_data (TLS)->id_to_purple_name, GINT_TO_POINTER(tgl_get_peer_id (id)),
       g_strdup (name));
 #endif
+  //Always add nickname as nickname
+  g_hash_table_replace(tls_get_data(TLS)->id_to_purple_nickname, GINT_TO_POINTER(tgl_get_peer_id(id)),
+	  g_strdup(name));
 
   debug("blist_lookup: Adding %s->%d", name, id.peer_id);
   //Always store "print_name"->id
